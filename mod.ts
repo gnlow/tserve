@@ -16,7 +16,7 @@ const getFile = async (filepath: string) =>
 const handler =
 (transformer: Record<
     string,
-    (url: string, req: Request) => Promise<Response>
+    (filepath: string, url: URL) => Promise<Response>
 >) =>
 async (req: Request) => {
     const url = new URL(req.url)
@@ -27,7 +27,7 @@ async (req: Request) => {
 
     let response
     if (ext in transformer) {
-        response = await transformer[ext](filepath, req)
+        response = await transformer[ext](filepath, url)
     } else {
         response = await getFile(filepath)
     }
@@ -41,9 +41,7 @@ async (req: Request) => {
 }
 
 Deno.serve(handler({
-    async ts(filepath, req) {
-        const url = new URL(req.url)
-        
+    async ts(filepath, url) {
         if (url.searchParams.get("ts") == "true") {
             const response = await getFile(filepath)
             response.headers.set(
