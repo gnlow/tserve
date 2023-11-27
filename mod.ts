@@ -4,6 +4,7 @@ import {
 } from "https://deno.land/std@0.206.0/path/mod.ts"
 import { contentType } from "https://deno.land/std@0.206.0/media_types/content_type.ts"
 import { transpile } from "https://deno.land/x/emit@0.31.2/mod.ts"
+import { fromFileUrl } from "https://deno.land/std@0.208.0/path/windows/from_file_url.ts"
 
 const getFile = async (filepath: string) =>
     await Deno.open(
@@ -21,7 +22,7 @@ const handler =
 async (req: Request) => {
     const url = new URL(req.url)
     const filepath = "." + decodeURIComponent(url.pathname)
-    console.log(filepath)
+    console.log("Request:", filepath)
 
     const ext = extname(filepath).substring(1)
 
@@ -52,7 +53,23 @@ Deno.serve(handler({
         } else {
             const target = new URL(filepath, toFileUrl(Deno.cwd()).href + "/")
         
-            const result = await transpile(target)
+            const result = await transpile(
+                target,
+                {load: async (specifier) => {
+                    if (target.href == specifier) {
+                        return {
+                            kind: "module",
+                            specifier,
+                            content: await Deno.readTextFile(fromFileUrl(specifier)),
+                        }
+                    } else {
+                        return {
+                            kind: "external",
+                            specifier,
+                        }
+                    }
+                }}
+            )
     
             return new Response(
                 result.get(target.href),
