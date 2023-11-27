@@ -52,6 +52,9 @@ Deno.serve(handler({
             return response
         } else {
             const target = new URL(filepath, toFileUrl(Deno.cwd()).href + "/")
+
+            const label = `Transpile "${target.href}"`
+            console.time(label)
         
             const result = await transpile(
                 target,
@@ -70,6 +73,8 @@ Deno.serve(handler({
                     }
                 }}
             )
+
+            console.timeEnd(label)
     
             return new Response(
                 result.get(target.href),
