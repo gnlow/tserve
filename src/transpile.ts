@@ -1,6 +1,5 @@
 import { transpile as emit } from "https://deno.land/x/emit@0.31.2/mod.ts"
-import { toFileUrl } from "https://deno.land/std@0.206.0/path/mod.ts"
-import { fromFileUrl } from "https://deno.land/std@0.208.0/path/windows/mod.ts"
+import { toFileUrl, fromFileUrl } from "https://deno.land/std@0.206.0/path/mod.ts"
 
 export const transpile =
 async (filepath: string) => {
