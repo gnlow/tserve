@@ -3,7 +3,7 @@ import {
     toFileUrl,
 } from "https://deno.land/std@0.206.0/path/mod.ts"
 import { contentType } from "https://deno.land/std@0.206.0/media_types/content_type.ts"
-import { transpile } from "https://deno.land/x/emit@0.31.2/mod.ts"
+import { transpile } from "./src/transpile.ts"
 import { fromFileUrl } from "https://deno.land/std@0.208.0/path/windows/from_file_url.ts"
 
 const getFile = async (filepath: string) =>
@@ -56,23 +56,7 @@ Deno.serve(handler({
             const label = `Transpile "${target.href}"`
             console.time(label)
         
-            const result = await transpile(
-                target,
-                {load: async (specifier) => {
-                    if (target.href == specifier) {
-                        return {
-                            kind: "module",
-                            specifier,
-                            content: await Deno.readTextFile(fromFileUrl(specifier)),
-                        }
-                    } else {
-                        return {
-                            kind: "external",
-                            specifier,
-                        }
-                    }
-                }}
-            )
+            const result = await transpile(target)
 
             console.timeEnd(label)
     
