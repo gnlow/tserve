@@ -4,7 +4,5 @@ import { transpile } from "./src/transpile.ts"
 for await (const entry of walk(".", { exts: ["ts"] })) {
     const result = await transpile(entry.path)
 
-    if (!result) throw new Error()
-
-    await Deno.writeTextFile(entry.path, result)
+    await Deno.writeTextFile(entry.path, result || "")
 }
