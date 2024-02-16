@@ -1,10 +1,8 @@
 import {
     extname,
-    toFileUrl,
 } from "https://deno.land/std@0.206.0/path/mod.ts"
 import { contentType } from "https://deno.land/std@0.206.0/media_types/content_type.ts"
 import { transpile } from "./src/transpile.ts"
-import { fromFileUrl } from "https://deno.land/std@0.208.0/path/windows/from_file_url.ts"
 
 const getFile = async (filepath: string) =>
     await Deno.open(
@@ -51,17 +49,16 @@ Deno.serve(handler({
             )
             return response
         } else {
-            const target = new URL(filepath, toFileUrl(Deno.cwd()).href + "/")
 
-            const label = `Transpile "${target.href}"`
+            const label = `Transpile "${filepath}"`
             console.time(label)
         
-            const result = await transpile(target)
+            const result = await transpile(filepath)
 
             console.timeEnd(label)
     
             return new Response(
-                result.get(target.href),
+                result,
                 { headers: {
                     "content-type": "application/javascript",
                     "x-typescript-types": appendParam("ts", "true")(url).href,
