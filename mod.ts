@@ -4,6 +4,24 @@ import {
 import { contentType } from "https://deno.land/std@0.206.0/media_types/content_type.ts"
 import { transpile } from "./src/transpile.ts"
 
+import {
+    relative,
+    join,
+    normalize,
+    fromFileUrl,
+} from "https://deno.land/std@0.224.0/path/mod.ts"
+
+const cwd = Deno.cwd()
+const scriptDir = join(fromFileUrl(import.meta.url), "..")
+console.log({cwd, scriptDir})
+const relPath = normalize(relative(scriptDir, cwd))
+
+const relImport = async (path: string) => {
+    const adjustedPath = join(relPath, path).replaceAll("\\", "/")
+
+    return await import("./" + adjustedPath)
+}
+
 const getFile = async (filepath: string) =>
     await Deno.open(
         filepath,
@@ -66,11 +84,37 @@ async (filepath: string, url: URL) => {
     }
 }
 
+const htmlPreset =
+(body: string) => `<!doctype html><html>
+    <head>
+        <meta charset="UTF-8">
+    </head>
+    <body>
+        ${body}
+    </body>
+</html>`
+
+let cacheBuster = 0
+
 Deno.serve(handler({
     ts: handleTs,
     async tsx(filepath, url, req) {
-        console.log(req.headers.get("accept"))
-        return await handleTs(filepath, url)
+        const accept = req.headers.get("accept") || ""
+
+        if (accept.includes("text/html")) {
+            return new Response(
+                htmlPreset(
+                    (await relImport(
+                        filepath + "#" + cacheBuster++
+                    )).default
+                ),
+                { headers: {
+                    "content-type": "text/html",
+                }}
+            )
+        } else {
+            return await handleTs(filepath, url)
+        }
     }
 }))
 
