@@ -15,7 +15,7 @@ const getFile = async (filepath: string) =>
 const handler =
 (transformer: Record<
     string,
-    (filepath: string, url: URL) => Promise<Response>
+    (filepath: string, url: URL, req: Request) => Promise<Response>
 >) =>
 async (req: Request) => {
     const url = new URL(req.url)
@@ -26,7 +26,7 @@ async (req: Request) => {
 
     let response
     if (ext in transformer) {
-        response = await transformer[ext](filepath, url)
+        response = await transformer[ext](filepath, url, req)
     } else {
         response = await getFile(filepath)
     }
@@ -49,7 +49,32 @@ Deno.serve(handler({
             )
             return response
         } else {
+            const label = `Transpile "${filepath}"`
+            console.time(label)
+        
+            const result = await transpile(filepath)
 
+            console.timeEnd(label)
+    
+            return new Response(
+                result,
+                { headers: {
+                    "content-type": "application/javascript",
+                    "x-typescript-types": appendParam("ts", "true")(url).href,
+                }}
+            )
+        }
+    },
+    async tsx(filepath, url, req) {
+        console.log(req.headers.get("accept"))
+        if (url.searchParams.get("ts") == "true") {
+            const response = await getFile(filepath)
+            response.headers.set(
+                "content-type",
+                "text/plain",
+            )
+            return response
+        } else {
             const label = `Transpile "${filepath}"`
             console.time(label)
         

@@ -1,9 +1,14 @@
-import { transpile as emit } from "https://deno.land/x/emit@0.31.2/mod.ts"
+import { transpile as emit } from "https://deno.land/x/emit@0.40.0/mod.ts"
 import { toFileUrl, fromFileUrl } from "https://deno.land/std@0.206.0/path/mod.ts"
 
 export const transpile =
 async (filepath: string) => {
     const target = new URL(filepath, toFileUrl(Deno.cwd()).href + "/")
+
+    const options =
+        await Deno.readTextFile("deno.json")
+            .then(x => JSON.parse(x))
+            .catch(_ => ({}))
 
     const result = await emit(target, {
         load: async (specifier) => {
@@ -19,7 +24,9 @@ async (filepath: string) => {
                     specifier,
                 }
             }
-        }
+        },
+        compilerOptions: 
+            options.compilerOptions,
     })
 
     return result.get(target.href)
