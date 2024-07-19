@@ -39,57 +39,38 @@ async (req: Request) => {
     return response
 }
 
-Deno.serve(handler({
-    async ts(filepath, url) {
-        if (url.searchParams.get("ts") == "true") {
-            const response = await getFile(filepath)
-            response.headers.set(
-                "content-type",
-                "text/plain",
-            )
-            return response
-        } else {
-            const label = `Transpile "${filepath}"`
-            console.time(label)
-        
-            const result = await transpile(filepath)
-
-            console.timeEnd(label)
+const handleTs =
+async (filepath: string, url: URL) => {
+    if (url.searchParams.get("ts") == "true") {
+        const response = await getFile(filepath)
+        response.headers.set(
+            "content-type",
+            "text/plain",
+        )
+        return response
+    } else {
+        const label = `Transpile "${filepath}"`
+        console.time(label)
     
-            return new Response(
-                result,
-                { headers: {
-                    "content-type": "application/javascript",
-                    "x-typescript-types": appendParam("ts", "true")(url).href,
-                }}
-            )
-        }
-    },
+        const result = await transpile(filepath)
+
+        console.timeEnd(label)
+
+        return new Response(
+            result,
+            { headers: {
+                "content-type": "application/javascript",
+                "x-typescript-types": appendParam("ts", "true")(url).href,
+            }}
+        )
+    }
+}
+
+Deno.serve(handler({
+    ts: handleTs,
     async tsx(filepath, url, req) {
         console.log(req.headers.get("accept"))
-        if (url.searchParams.get("ts") == "true") {
-            const response = await getFile(filepath)
-            response.headers.set(
-                "content-type",
-                "text/plain",
-            )
-            return response
-        } else {
-            const label = `Transpile "${filepath}"`
-            console.time(label)
-        
-            const result = await transpile(filepath)
-
-            console.timeEnd(label)
-    
-            return new Response(
-                result,
-                { headers: {
-                    "content-type": "application/javascript",
-                    "x-typescript-types": appendParam("ts", "true")(url).href,
-                }}
-            )
-        }
+        return await handleTs(filepath, url)
     }
 }))
 
