@@ -1,4 +1,4 @@
-import { transpile as emit } from "https://deno.land/x/emit@0.40.0/mod.ts"
+import { transpile as emit } from "jsr:@deno/emit@0.46.0"
 import { toFileUrl, fromFileUrl } from "https://deno.land/std@0.206.0/path/mod.ts"
 
 export const transpile =
