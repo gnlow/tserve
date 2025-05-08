@@ -47,7 +47,7 @@ async (req: Request) => {
 
 export type Transpiler = (filePath: string) => Promise<string | Response | undefined>
 
-const handleTsLike =
+export const handleTsLike =
 (
     extMatch: string,
     toJs: Transpiler,
@@ -96,7 +96,7 @@ export class Tserve {
     handlers
 
     constructor(handlers: Handler[] = []) {
-        this.handlers = [handleTs, ...handlers]
+        this.handlers = [...handlers, handleTs]
     }
     serve() {
         Deno.serve(resolveHandlers(this.handlers))
