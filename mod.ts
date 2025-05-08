@@ -12,11 +12,19 @@ const getFile = async (filepath: string) =>
     .then(file => new Response(file.readable))
     .catch(e => new Response(e, { status: 404 }))
 
-const handler =
-(transformer: Record<
-    string,
-    (filepath: string, url: URL, req: Request) => Promise<Response>
->) =>
+export interface HandlerInfo {
+    req: Request
+    filepath: string
+    url: URL
+    ext: string
+}
+
+export type Handler =
+(info: HandlerInfo) =>
+    Promise<Response | false>
+
+const resolveHandlers =
+(handlers: Handler[]) =>
 async (req: Request) => {
     const url = new URL(req.url)
     const filepath = "." + decodeURIComponent(url.pathname)
@@ -24,12 +32,10 @@ async (req: Request) => {
 
     const ext = extname(filepath).substring(1)
 
-    let response
-    if (ext in transformer) {
-        response = await transformer[ext](filepath, url, req)
-    } else {
-        response = await getFile(filepath)
-    }
+    const ress = await Promise.all(handlers.map(handler => handler({
+        ext, filepath, url, req
+    })))
+    const response = ress.find(x => x) || await getFile(filepath)
 
     response.headers.get("content-type") ||
     response.headers.set(
@@ -39,10 +45,21 @@ async (req: Request) => {
     return response
 }
 
-const handleTs =
-async (filepath: string, url: URL) => {
+export type Transpiler = (filePath: string) => Promise<string | Response | undefined>
+
+const handleTsLike =
+(
+    extMatch: string,
+    toJs: Transpiler,
+    toTs: Transpiler = getFile,
+): Handler =>
+async ({ filepath, url, ext }) => {
+    if (ext != extMatch) return false
     if (url.searchParams.get("ts") == "true") {
-        const response = await getFile(filepath)
+        const out = await toTs(filepath) || "Err!"
+        const response = typeof out == "string"
+            ? new Response(out)
+            : out
         response.headers.set(
             "content-type",
             "text/plain",
@@ -51,24 +68,40 @@ async (filepath: string, url: URL) => {
     } else {
         const label = `Transpile "${filepath}"`
         console.time(label)
-    
-        const result = await transpile(filepath)
+
+        const out = await toJs(filepath) || "Err!"
 
         console.timeEnd(label)
-
-        return new Response(
-            result,
-            { headers: {
-                "content-type": "application/javascript",
-                "x-typescript-types": appendParam("ts", "true")(url).href,
-            }}
+        
+        const response = typeof out == "string"
+            ? new Response(out)
+            : out
+            
+        response.headers.set(
+            "content-type",
+            "text/plain",
         )
+        response.headers.set(
+            "x-typescript-types",
+            appendParam("ts", "true")(url).href,
+        )
+
+        return response
     }
 }
 
-Deno.serve(handler({
-    ts: handleTs,
-}))
+const handleTs = handleTsLike("ts", transpile)
+
+export class Tserve {
+    handlers
+
+    constructor(handlers: Handler[] = []) {
+        this.handlers = [handleTs, ...handlers]
+    }
+    serve() {
+        Deno.serve(resolveHandlers(this.handlers))
+    }
+}
 
 const appendParam =
     (name: string, value: string) =>

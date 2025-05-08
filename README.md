@@ -2,5 +2,5 @@
 file_server + deno_emit
 
 ```sh
-deno run -A https://deno.land/x/tserve/mod.ts
+deno run -A https://deno.land/x/tserve/serve.ts
 ```
