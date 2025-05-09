@@ -79,7 +79,7 @@ async ({ filepath, url, ext }) => {
             
         response.headers.set(
             "content-type",
-            "text/plain",
+            "application/javascript",
         )
         response.headers.set(
             "x-typescript-types",
